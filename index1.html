@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project 1 - sample code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.1.2/papaparse.min.js" charset="utf-8"></script>
+    <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+    <style>
+        text {
+            font-family: Arial;
+            font-size: 15px;
+        }
+
+        .tick text {
+            fill: black;
+            font-size: 11px;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: grey;
+            stroke-width: 1;
+            shape-rendering: crispEdges;
+        }
+        circle{
+            fill: green;
+        }
+        circle:hover{
+            fill:red;
+        }
+    </style>
+</head>
+<body>
+<div style="position: absolute; width:60%">
+<svg id="main" width="100%" height="1000">
+    <text id='label' x='100' y='70'></text>
+</svg>
+
+<select id="selectEnergy" style="position: absolute; left: 500px; top: 580px"></select>
+<select id="selectEnergy2" style="position: absolute; left: 10px; top: 80px"></select>
+<select id="selectEnergy3" style="position: absolute; left: 200px; top: 650px"></select>
+
+<div style="position: absolute;left: 450px;top: 650px;">
+    <p id="currentYear" style="position: inherit;left: 180px;top: -30px;">1980</p>
+1980<input id="selectYear" type="range" value="1980" min="1980" max="2012" style="width:300px;">2012
+</div>
+</div>
+
+<div style="position: absolute; left: 1233px; top: 0px;width:30%;height: 100%;">
+    <div style="position: inherit;left: 0px;top: 0px;width:50%;height:25%;border:solid;border-width:1px;">
+        <svg width="100%" height="100%">
+            <text x="40%" y="10%">World</text>
+            <circle id="worldSide" cx="50%" cy="50%" r="30%" fill="black"></circle>
+            <text id="worldSideAmount" x="35%" y="90%">%</text>
+        </svg>
+    </div>
+    <div style="position: inherit;left: 50%;top: 0px;width:50%;height:25%;border:solid;border-width:1px;">
+        <svg width="100%" height="100%">
+            <text x="35%" y="10%">North America	</text>
+            <circle id="naSide" cx="50%" cy="50%" r="30%" fill="black"></circle>
+            <text id="naSideAmount" x="35%" y="90%">%</text>
+        </svg>
+    </div>
+    <div style="position: inherit;left: 0px;top: 25%;width:50%;height:25%;border:solid;border-width:1px;">
+        <svg width="100%" height="100%">
+            <text x="22%" y="10%">Central & South America</text>
+            <circle id="saSide" cx="50%" cy="50%" r="20%" fill="black"></circle>
+            <text id="saSideAmount" x="35%" y="90%">%</text>
+        </svg>
+    </div>
+    <div style="position: inherit;left: 50%;top: 25%;width:50%;height:25%;border:solid;border-width:1px;">
+        <svg width="100%" height="100%">
+            <text x="40%" y="10%">Europe</text>
+            <circle id="europeSide" cx="50%" cy="50%" r="20%" fill="black"></circle>
+            <text id="europeSideAmount" x="35%" y="90%">%</text>
+        </svg>
+    </div>
+    <div style="position: inherit;left: 0px;top: 50%;width:50%;height:25%;border:solid;border-width:1px;">
+        <svg width="100%" height="100%">
+            <text x="40%" y="10%">Eurasia</text>
+            <circle id="eurSide" cx="50%" cy="50%" r="20%" fill="black"></circle>
+            <text id="eurSideAmount" x="35%" y="90%">%</text>
+        </svg>
+    </div>
+    <div style="position: inherit;left: 50%;top: 50%;width:50%;height:25%;border:solid;border-width:1px;">
+        <svg width="100%" height="100%">
+            <text x="37%" y="10%">Middle East</text>
+            <circle id="meSide" cx="50%" cy="50%" r="20%" fill="black"></circle>
+            <text id="meSideAmount" x="35%" y="90%">%</text>
+        </svg>
+    </div>
+    <div style="position: inherit;left: 0px;top: 75%;width:50%;height:25%;border:solid;border-width:1px;">
+        <svg width="100%" height="100%">
+            <text x="40%" y="10%">Africa</text>
+            <circle id="africaSide" cx="50%" cy="50%" r="20%" fill="black"></circle>
+            <text id="africaSideAmount" x="35%" y="90%">%</text>
+        </svg>
+    </div>
+    <div style="position: inherit;left: 50%;top: 75%;width:50%;height:25%;border:solid;border-width:1px;">
+        <svg width="100%" height="100%">
+            <text x="30%" y="10%">Asia & Oceania</text>
+            <circle id="asiaSide" cx="50%" cy="50%" r="20%" fill="black"></circle>
+            <text id="asiaSideAmount" x="35%" y="90%">%</text>
+        </svg>
+    </div>
+</div>
+<script>
+    var listOfLocalities = [];
+    var localities = {};
+    var selection;
+    var localityName;
+    var EnergyName;
+    //-------------------------------1--------------------------------
+    Papa.parse('Data-Sets/petroleum_production.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+            // loop through all the rows in file
+            for (var row = 0; row < results.data.length; row++) {
+                var record = results.data[row];
+
+                // make an object to store data for the current locality
+                var locality = {
+                    name: record.Locality,
+                    totalEnergyProduction: [],
+                    totalEnergyConsumption: [],
+                    co2: [],
+                    coalConsumption: [],
+                    coalProduction: [],
+                    petroleumConsumption: [],
+                    petroleumProduction: [],
+                    renewableBiofuelConsumption: [],
+                    renewableBiofuelProduction: [],
+                    renewableElectricityConsumption: [],
+                    renewableElectricityProduction: [],
+                    totalElectricityConsumption: [],
+                    totalElectricityProduction: [],
+                }
+
+                // loop through all years, from 1980 to 2012
+                for (var year = 1980; year <= 2012; year++) {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy production
+                    locality.petroleumProduction.push(value);
+                }
+
+                // add the current locality to an index
+                localities[locality.name] = locality;
+                listOfLocalities.push(locality.name);
+            }
+        }
+    });
+    //-------------------------------2--------------------------------
+    Papa.parse('Data-Sets/petroleum_consumption.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+            // loop through all the rows in file
+            for (var row = 0; row < results.data.length; row++) {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year = 1980; year <= 2012; year++) {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[record.Locality].petroleumConsumption.push(value);
+                }
+
+            }
+        }
+    });
+    //-------------------------------3--------------------------------
+    Papa.parse('Data-Sets/co2_emissions_per_capita.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+            // loop through all the rows in file
+            for (var row = 0; row < results.data.length; row++) {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year = 1980; year <= 2012; year++) {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[record.Locality].co2.push(value);
+                }
+
+            }
+        }
+    });
+    //-------------------------------4--------------------------------
+    Papa.parse('Data-Sets/coal_consumption.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].coalConsumption.push(value);
+                }
+
+            }
+        }
+    });
+    //-------------------------------5--------------------------------
+    Papa.parse('Data-Sets/coal_production.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].coalProduction.push(value);
+                }
+
+            }
+        }
+    });
+    //-------------------------------6--------------------------------
+    Papa.parse('Data-Sets/renewable_biofuel_consumption.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].renewableBiofuelConsumption.push(value);
+                }
+            }
+
+        }
+    });
+    //-------------------------------7--------------------------------
+    Papa.parse('Data-Sets/renewable_biofuel_production.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].renewableBiofuelProduction.push(value);
+                }
+            }
+        }
+    });
+    //-------------------------------8--------------------------------
+    Papa.parse('Data-Sets/renewable_electricity_consumption.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].renewableElectricityConsumption.push(value);
+                }
+            }
+        }
+    });
+    //-------------------------------9--------------------------------
+    Papa.parse('Data-Sets/renewable_electricity_generation.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].renewableElectricityProduction.push(value);
+                }
+            }
+        }
+    });
+    //-------------------------------10-------------------------------
+    Papa.parse('Data-Sets/total_electricity_consumption.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+                    // add record of current energy consumption
+                    localities[ record.Locality].totalElectricityConsumption.push(value);
+                }
+            }
+        }
+    });
+    //-------------------------------11-------------------------------
+    Papa.parse('Data-Sets/total_electricity_generation.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].totalElectricityProduction.push(value);
+                }
+            }
+
+        }
+    });
+    //-------------------------------12-------------------------------
+    Papa.parse('Data-Sets/total_primary_energy_consumption.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].totalEnergyConsumption.push(value);
+                }
+            }
+        }
+    });
+    //-------------------------------13-------------------------------
+    Papa.parse('Data-Sets/total_primary_energy_production.csv', {
+
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results)
+        {
+            // loop through all the rows in file
+            for (var row=0; row < results.data.length; row++)
+            {
+                var record = results.data[row];
+
+                // loop through all years, from 1980 to 2012
+                for (var year=1980; year<=2012; year++)
+                {
+                    var value = record[year];
+
+                    // deal with missing data points
+                    if (value === '--') {
+                        value = 0;
+                    }
+                    else if (value === 'NA') {
+                        value = 0;
+                    }
+                    else if (value === '(s)') {
+                        value = 0;
+                    }
+                    else if (value === 'W') {
+                        value = 0;
+                    }
+                    else if (value === undefined)
+                    {
+                        value = 0;
+                    }
+
+                    // add record of current energy consumption
+                    localities[ record.Locality].totalEnergyProduction.push(value);
+                }
+            }
+
+
+            //--------------------------------------------------------------------------------------------
+
+
+            drawScatterPlot('total_primary_energy_production','total_primary_energy_production','total_primary_energy_production',1980);
+
+            //populate the drop down of energies
+            d3.select('#selectEnergy').selectAll('option')
+                    .data(['total_primary_energy_production',
+                        'total_primary_energy_consumption',
+                        'total_electricity_generation',
+                        'total_electricity_consumption',
+                        'renewable_electricity_generation',
+                        'renewable_electricity_consumption',
+                        'renewable_biofuel_production',
+                        'renewable_biofuel_consumption',
+                        'petroleum_production',
+                        'petroleum_consumption',
+                        'coal_production',
+                        'coal_consumption',
+                        'co2_emissions_per_capita'])
+                    .enter().append('option')
+                    .html(function(d) { return d; })
+                    .attr('value', function(d) { return d; });
+            d3.select('#selectEnergy2').selectAll('option')
+                    .data(['total_primary_energy_production',
+                        'total_primary_energy_consumption',
+                        'total_electricity_generation',
+                        'total_electricity_consumption',
+                        'renewable_electricity_generation',
+                        'renewable_electricity_consumption',
+                        'renewable_biofuel_production',
+                        'renewable_biofuel_consumption',
+                        'petroleum_production',
+                        'petroleum_consumption',
+                        'coal_production',
+                        'coal_consumption',
+                        'co2_emissions_per_capita'])
+                    .enter().append('option')
+                    .html(function(d) { return d; })
+                    .attr('value', function(d) { return d; });
+            d3.select('#selectEnergy3').selectAll('option')
+                    .data(['total_primary_energy_production',
+                        'total_primary_energy_consumption',
+                        'total_electricity_generation',
+                        'total_electricity_consumption',
+                        'renewable_electricity_generation',
+                        'renewable_electricity_consumption',
+                        'renewable_biofuel_production',
+                        'renewable_biofuel_consumption',
+                        'petroleum_production',
+                        'petroleum_consumption',
+                        'coal_production',
+                        'coal_consumption',
+                        'co2_emissions_per_capita'])
+                    .enter().append('option')
+                    .html(function(d) { return d; })
+                    .attr('value', function(d) { return d; });
+            var y = [];
+            for(var i = 1980;i<=2012;i++)
+                y.push(i);
+            d3.select('#selectYear').selectAll('option')
+                    .data(y)
+                    .enter().append('option')
+                    .html(function(d) { return d; })
+                    .attr('value', function(d) { return d; });
+
+
+            d3.select("#selectEnergy")
+                    .on('change', function() {
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy');
+                        EnergyName = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy2');
+                        EnergyName2 = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy3');
+                        EnergyName3 = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectYear');
+                        year = selection.value;
+
+                        drawScatterPlot(EnergyName,EnergyName2, EnergyName3, year)
+                    });
+
+            d3.select("#selectEnergy2")
+                    .on('change', function() {
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy');
+                        EnergyName = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy2');
+                        EnergyName2 = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy3');
+                        EnergyName3 = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectYear');
+                        year = selection.value;
+
+                        drawScatterPlot(EnergyName,EnergyName2, EnergyName3, year)
+                    });
+            d3.select("#selectEnergy3")
+                    .on('change', function() {
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy');
+                        EnergyName = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy2');
+                        EnergyName2 = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy3');
+                        EnergyName3 = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectYear');
+                        year = selection.value;
+
+                        drawScatterPlot(EnergyName,EnergyName2, EnergyName3, year)
+                    });
+
+            document.getElementById("selectYear").addEventListener("input", function() {
+
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy');
+                        EnergyName = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy2');
+                        EnergyName2 = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectEnergy3');
+                        EnergyName3 = selection.options[selection.selectedIndex].value;
+
+                        // figure out the newly selected locality
+                        selection = document.getElementById('selectYear');
+                        year = selection.value;
+                        document.getElementById('currentYear').innerHTML = year;
+                        drawScatterPlot(EnergyName,EnergyName2, EnergyName3, year)
+                    });
+        }
+    });
+
+function specificData(EnergyPara,year,MainData){
+    listOfLocalities.forEach( function(entry) {
+        {
+            entry = localities[entry];
+            if (EnergyPara == 'total_primary_energy_production') {
+                MainData[entry.name] = (entry.totalEnergyProduction[year - 1980]);
+            } else if (EnergyPara == 'total_primary_energy_consumption') {
+                MainData[entry.name] = (entry.totalEnergyConsumption[year - 1980]);
+            } else if (EnergyPara == 'total_electricity_generation') {
+                MainData[entry.name]=( entry.totalElectricityProduction[year -1980]);
+            } else if (EnergyPara == 'total_electricity_consumption') {
+                MainData[entry.name]=(entry.totalElectricityConsumption[year -1980]);
+            } else if (EnergyPara == 'renewable_electricity_generation') {
+                MainData[entry.name]=(entry.renewableElectricityProduction[year -1980]);
+            } else if (EnergyPara == 'renewable_electricity_consumption') {
+                MainData[entry.name]=(entry.renewableElectricityConsumption[year -1980]);
+            } else if (EnergyPara == 'renewable_biofuel_production') {
+                MainData[entry.name]=(entry.renewableBiofuelProduction[year -1980]);
+            } else if (EnergyPara == 'renewable_biofuel_consumption') {
+                MainData[entry.name]=(entry.renewableBiofuelConsumption[year -1980]);
+            } else if (EnergyPara == 'petroleum_production') {
+                MainData[entry.name]=(entry.petroleumProduction[year -1980]);
+            } else if (EnergyPara == 'petroleum_consumption') {
+                MainData[entry.name]=(entry.petroleumConsumption[year - 1980]);
+            } else if (EnergyPara == 'coal_production') {
+                MainData[entry.name]=(entry.coalProduction[year -1980]);
+            } else if (EnergyPara == 'coal_consumption') {
+                MainData[entry.name]=(entry.coalConsumption[year -1980]);
+            } else if (EnergyPara == 'co2_emissions_per_capita') {
+                MainData[entry.name]=(entry.co2[year -1980]);
+            }
+        }
+    });
+    var max = 0;
+    listOfLocalities.forEach(function(entry){
+        if(entry!="World" && entry!="North America" && entry!="Central & South America" && entry!="Europe" && entry!="Euroasia"
+                && entry!="Africa" && entry!="Middle East" && entry!="Asia & Oceania"){
+            if(max<MainData[entry])
+                max = MainData[entry];
+        }
+
+    });
+    return max;
+}
+
+    function drawScatterPlot(EnergyPara1, EnergyPara2, EnergyPara3, year) {
+        var margin = {top: 50, right: 300, bottom: 50, left: 50},
+                outerWidth = 1050,
+                outerHeight = 500,
+                width = outerWidth - margin.left - margin.right,
+                height = outerHeight - margin.top - margin.bottom;
+
+        var xCat = EnergyPara1,
+                yCat = EnergyPara2,
+                rCat = EnergyPara3,
+                colorCat = d3.scale.category10();
+
+        var mainData = [];
+        var secData = [];
+        var terData = [];
+
+        var maxValuex = specificData(EnergyPara1, year, mainData);
+        var maxValuey = specificData(EnergyPara2, year, secData);
+        var maxValuer = specificData(EnergyPara3, year, terData);
+
+        var chartWidth = 900;
+        var chartHeight = 420;
+        var y = d3.scale.linear()
+                .domain([0, maxValuey])
+                .range([chartHeight, 10]);
+
+        var x = d3.scale.linear()
+                .domain([0, maxValuex])
+                .range([0, chartWidth - 10]);
+
+        var r = d3.scale.linear()
+                .domain([0, maxValuer])
+                .range([3, 30]);
+
+
+            /*data.forEach(function(d) {
+                d.Calories = +d.Calories;
+                d.Carbs = +d.Carbs;
+                d["Cups per Serving"] = +d["Cups per Serving"];
+                d["Dietary Fiber"] = +d["Dietary Fiber"];
+                d["Display Shelf"] = +d["Display Shelf"];
+                d.Fat = +d.Fat;
+                d.Potassium = +d.Potassium;
+                d["Protein (g)"] = +d["Protein (g)"];
+                d["Serving Size Weight"] = +d["Serving Size Weight"];
+                d.Sodium = +d.Sodium;
+                d.Sugars = +d.Sugars;
+                d["Vitamins and Minerals"] = +d["Vitamins and Minerals"];
+            });
+
+            var xMax = d3.max(data, function(d) { return d[xCat]; }) * 1.05,
+                    xMin = d3.min(data, function(d) { return d[xCat]; }),
+                    xMin = xMin > 0 ? 0 : xMin,
+                    yMax = d3.max(data, function(d) { return d[yCat]; }) * 1.05,
+                    yMin = d3.min(data, function(d) { return d[yCat]; }),
+                    yMin = yMin > 0 ? 0 : yMin;
+
+            x.domain([xMin, xMax]);
+            y.domain([yMin, yMax]);
+*/
+            var xAxis = d3.svg.axis()
+                    .scale(x)
+                    .orient("bottom")
+                    .tickSize(-height);
+
+            var yAxis = d3.svg.axis()
+                    .scale(y)
+                    .orient("left")
+                    .tickSize(-width);
+
+            var color = d3.scale.category10();
+
+            var tip = d3.tip()
+                    .attr("class", "d3-tip")
+                    .offset([-10, 0])
+                    .html(function(d) {
+                        return xCat + ": " + MainData + "<br>" + yCat + ": " + secData;
+                    });
+
+            var zoomBeh = d3.behavior.zoom()
+                    .x(x)
+                    .y(y)
+                    .scaleExtent([0, 500])
+                    .on("zoom", zoom);
+
+            var svg = d3.select("#main")
+                    .append("svg")
+                    .attr("width", outerWidth)
+                    .attr("height", outerHeight)
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+                    .call(zoomBeh);
+
+            //svg.call(tip);
+
+            svg.append("rect")
+                    .attr("width", width)
+                    .attr("height", height);
+
+            svg.append("g")
+                    .classed("x axis", true)
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(xAxis)
+                    .append("text")
+                    .classed("label", true)
+                    .attr("x", width)
+                    .attr("y", margin.bottom - 10)
+                    .style("text-anchor", "end")
+                    .text(xCat);
+
+            svg.append("g")
+                    .classed("y axis", true)
+                    .call(yAxis)
+                    .append("text")
+                    .classed("label", true)
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", -margin.left)
+                    .attr("dy", ".71em")
+                    .style("text-anchor", "end")
+                    .text(yCat);
+
+            var objects = svg.append("svg")
+                    .classed("objects", true)
+                    .attr("width", width)
+                    .attr("height", height);
+
+            objects.append("svg:line")
+                    .classed("axisLine hAxisLine", true)
+                    .attr("x1", 0)
+                    .attr("y1", 0)
+                    .attr("x2", width)
+                    .attr("y2", 0)
+                    .attr("transform", "translate(0," + height + ")");
+
+            objects.append("svg:line")
+                    .classed("axisLine vAxisLine", true)
+                    .attr("x1", 0)
+                    .attr("y1", 0)
+                    .attr("x2", 0)
+                    .attr("y2", height);
+
+            objects.selectAll(".dot")
+                    .data(mainData)
+                    .enter().append("circle")
+                    .classed(
+                            "dot", true)
+                    .attr("x",function(d,i){return MainData[i];})
+                    .attr("y",function(d,i){return secData[i];})
+                    .attr("r",
+                            function (d,i) { return terData[i];})
+                    .attr("transform",
+                            transform)
+                    .style("fill", function(d) { return color(d); })
+                    .on("mouseover", tip.show)
+                    .on("mouseout", tip.hide);
+            /*var legend = svg.selectAll(".legend")
+                    .data(color.domain())
+                    .enter().append("g")
+                    .classed("legend", true)
+                    .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+            legend.append("circle")
+                    .attr("r", 3.5)
+                    .attr("cx", width + 20)
+                    .attr("fill", color);
+
+            legend.append("text")
+                    .attr("x", width + 26)
+                    .attr("dy", ".35em")
+                    .text(function(d) { return d; });*/
+
+            d3.select("input").on("click", change);
+
+
+
+        }
+    function change() {
+        xCat = "Carbs";
+        xMax = d3.max(data, function(d) { return d[xCat]; });
+        xMin = d3.min(data, function(d) { return d[xCat]; });
+
+        zoomBeh.x(x.domain([xMin, xMax])).y(y.domain([yMin, yMax]));
+
+        var svg = d3.select("#scatter").transition();
+
+        svg.select(".x.axis").duration(750).call(xAxis).select(".label").text(xCat);
+
+        objects.selectAll(".dot").transition().duration(1000).attr("transform", transform);
+    }
+
+    function zoom() {
+        svg.select(".x.axis").call(xAxis);
+        svg.select(".y.axis").call(yAxis);
+
+        svg.selectAll(".dot")
+                .attr("transform", transform);
+    }
+
+    function transform(d) {
+        return "translate(" + x(d[xCat]) + "," + y(d[yCat]) + ")";
+    }
+</script>
+</body>
+
+
+</html>
